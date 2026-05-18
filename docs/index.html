@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>debian-server-post-install — Intelligent Debian server setup.</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080c10;
+  --bg2:      #0d1117;
+  --bg3:      #161b22;
+  --bg4:      #1c2128;
+  --border:   #30363d;
+  --text:     #e6edf3;
+  --muted:    #8b949e;
+  --dim:      #484f58;
+  --accent:   #58a6ff;
+  --accent2:  #3fb950;
+  --purple:   #bc8cff;
+  --orange:   #f0883e;
+  --red:      #f85149;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --sans:     -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; overflow-x: hidden; }
+::selection { background: rgba(88,166,255,.25); }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── NAVIGATION ─── */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(8,12,16,.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 0;
+}
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+.logo { font-weight: 700; font-size: 1.1rem; }
+.nav-links { display: flex; gap: 2rem; }
+.nav-link { font-size: 0.9rem; color: var(--muted); }
+.nav-link:hover, .nav-link.active { color: var(--text); }
+.nav-cta { padding: 0.4rem 1rem; background: var(--accent); color: #fff !important; border-radius: 4px; font-weight: 600; }
+.nav-cta:hover { background: #4a8be8; text-decoration: none; }
+
+/* ─── HERO ─── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6rem 2rem 4rem;
+  overflow: hidden;
+}
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(48,54,61,.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(48,54,61,.18) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 40%, transparent 100%);
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent2);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid rgba(63,185,80,.3);
+  border-radius: 2em;
+  background: rgba(63,185,80,.07);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.hero h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+.hero h1 .highlight {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: 1.15rem;
+  color: var(--muted);
+  max-width: 600px;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+/* ─── BUTTONS ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #4a8be8; text-decoration: none; transform: translateY(-1px); }
+.btn-secondary { background: var(--bg3); border: 1px solid var(--border); color: var(--text); }
+.btn-secondary:hover { background: var(--bg4); text-decoration: none; transform: translateY(-1px); }
+
+/* ─── TERMINAL ─── */
+.terminal {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  margin: 2rem 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,.3);
+}
+.term-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.term-dot { width: 12px; height: 12px; border-radius: 50%; }
+.term-dot.r { background: #ff5f57; }
+.term-dot.y { background: #febc2e; }
+.term-dot.g { background: #28c840; }
+.term-title { flex: 1; text-align: center; font-size: 0.72rem; color: var(--muted); font-family: var(--mono); }
+.term-body { padding: 1.2rem 1.4rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.8; }
+.term-body .prompt { color: var(--accent2); }
+.term-body .cmd { color: var(--text); }
+.term-body .flag { color: var(--accent); }
+.term-body .val  { color: var(--orange); }
+.term-body .comment { color: var(--dim); }
+.term-body .ok { color: var(--accent2); }
+.term-body .skip { color: var(--muted); }
+.term-body .warn { color: var(--orange); }
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--accent);
+  vertical-align: text-bottom;
+  animation: blink .9s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ─── STATS BAR ─── */
+.stats-bar {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  overflow: hidden;
+}
+.stat {
+  flex: 1;
+  padding: 1.75rem 1rem;
+  text-align: center;
+  border-right: 1px solid var(--border);
+  transition: background .2s;
+}
+.stat:last-child { border-right: none; }
+.stat:hover { background: var(--bg3); }
+.stat-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+.stat-label { font-size: 0.78rem; color: var(--muted); }
+
+/* ─── SECTIONS ─── */
+.section { position: relative; padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.section-title {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.75rem;
+}
+.section-sub { font-size: 1rem; color: var(--muted); max-width: 560px; line-height: 1.7; margin-bottom: 3rem; }
+
+/* ─── FEATURES GRID ─── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 2rem;
+}
+.feature-card {
+  padding: 2rem 1.5rem;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.feature-card:hover { background: var(--bg4); transform: translateY(-2px); }
+.feat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+.feat-icon.blue { background: rgba(88,166,255,.15); }
+.feat-icon.green { background: rgba(63,185,80,.15); }
+.feat-icon.purple { background: rgba(188,140,255,.15); }
+.feat-icon.orange { background: rgba(240,136,62,.15); }
+.feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.feature-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  .features-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .nav-links { display: none; }
+  .hero { padding: 4rem 1rem; }
+  .section { padding: 4rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<header>
+  <nav>
+    <div class="logo">debian-server-post-install</div>
+    <div class="nav-links">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#profiles" class="nav-link">Profiles</a>
+      <a href="#hardening" class="nav-link">Hardening</a>
+      <a href="#quickstart" class="nav-link">Quick start</a>
+    </div>
+    <a href="#quickstart" class="btn nav-cta">Get started</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+
+  <div class="hero-eyebrow">
+    <span>⚡</span> Debian · Ubuntu Server · VPS-safe
+  </div>
+
+  <h1>
+    Intelligent Debian server setup.<br>
+    <span class="highlight">Done securely.</span>
+  </h1>
+
+  <p class="hero-sub">
+    Profile-based automation with VPS-safe security hardening, granular network protection, and intelligent package management. Built for production servers.
+  </p>
+
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+    <a href="#quickstart" class="btn btn-primary">Download script</a>
+    <a href="https://github.com/franckferman/debian-server-post-install#readme" class="btn btn-secondary" target="_blank">Read the docs</a>
+  </div>
+
+  <div class="terminal">
+    <div class="term-header">
+      <div class="term-dot r"></div>
+      <div class="term-dot y"></div>
+      <div class="term-dot g"></div>
+      <div class="term-title">~/debian-server-post-install</div>
+    </div>
+    <div class="term-body">
+      <div><span class="prompt">$</span> <span class="cmd">sudo ./debian-server-post-install.sh</span> <span class="flag">--server-profile</span> <span class="val">prod</span> <span class="flag">--hardening</span> <span class="val">server</span></div>
+      <div style="margin:.5rem 0; color:var(--muted)">Debian Server Post-Install v1.0.0 — Production profile with server hardening</div>
+      <div><span class="ok">✓</span> <span style="color:var(--muted)">Step 1 — System update completed.</span></div>
+      <div><span class="ok">✓</span> <span style="color:var(--muted)">Step 2 — Essential packages installed (default profile).</span></div>
+      <div><span class="ok">✓</span> <span style="color:var(--muted)">Step 3 — Network hardening applied (9/9 components).</span></div>
+      <div><span class="skip">→ </span> <span style="color:var(--muted)">Step 4 — SSH already configured. Skipping.</span></div>
+      <div><span class="ok">✓</span> <span style="color:var(--muted)">Step 8 — Firewall configured with production ruleset.</span></div>
+      <div style="margin-top:.5rem"><span class="prompt">$</span> <span class="cursor"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">5</div><div class="stat-label">Server profiles</div></div>
+  <div class="stat"><div class="stat-num">10</div><div class="stat-label">Apps-profiles</div></div>
+  <div class="stat"><div class="stat-num">9</div><div class="stat-label">Network hardening</div></div>
+  <div class="stat"><div class="stat-num">VPS</div><div class="stat-label">Safe by default</div></div>
+</div>
+
+<!-- FEATURES -->
+<div id="features" style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<div class="section">
+  <div class="section-tag">Why this script</div>
+  <h2 class="section-title">Server automation.<br>Security first.</h2>
+  <p class="section-sub">Built for system administrators who value security, reliability, and intelligent automation. Every hardening option is VPS-safe by default.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feat-icon blue">⚡</div>
+      <h3>VPS-safe hardening</h3>
+      <p>All security defaults designed to prevent remote lockout. Root SSH enabled, passwords allowed by default for emergency access.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon green">⚙️</div>
+      <h3>Intelligent profiles</h3>
+      <p>5 server profiles with 10 inheritance-based apps-profiles for precise package management.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon purple">🔒</div>
+      <h3>Granular network security</h3>
+      <p>9 modular network hardening components. Enable exactly what you need with individual flags.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- QUICKSTART -->
+<div id="quickstart" style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<div class="section">
+  <div class="section-tag">Quick start</div>
+  <h2 class="section-title">Deploy in one command.</h2>
+  <p class="section-sub">Download the script, review it, run it with your preferred profile. No installer, no package, no complex setup.</p>
+
+  <div style="position: relative; margin: 2rem 0; border-radius: 8px; overflow: hidden;">
+<pre style="background: var(--bg2); border: 1px solid var(--border); padding: 1.5rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; white-space: pre-wrap;"># Download
+curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/stable/debian-server-post-install.sh
+
+# Review (important!)
+less debian-server-post-install.sh
+
+# Run with production profile
+sudo ./debian-server-post-install.sh --server-profile prod --hardening server</pre>
+  </div>
+</div>
+</div>
+
+<!-- FOOTER -->
+<footer style="padding: 2rem; border-top: 1px solid var(--border); background: var(--bg2); text-align: center; color: var(--muted); font-size: 0.85rem;">
+  <p>Built for Debian and Ubuntu Server by <a href="https://github.com/franckferman" target="_blank" style="color: var(--accent);">Franck Ferman</a></p>
+</footer>
+
+</body>
+</html>
