@@ -1634,7 +1634,7 @@ _configure_network_hardening() {
 # Network hardening (always active - safe settings)
 EOF
 
-    sudo sysctl -p /etc/sysctl.d/99-network-hardening.conf
+    sudo sysctl -p /etc/sysctl.d/99-network-hardening.conf >/dev/null
 }
 
 _harden_services() {
@@ -1831,7 +1831,7 @@ EOF
         echo "" | sudo tee -a /etc/sysctl.d/99-security-hardening.conf
     fi
 
-    sudo sysctl -p /etc/sysctl.d/99-security-hardening.conf
+    sudo sysctl -p /etc/sysctl.d/99-security-hardening.conf >/dev/null
 }
 
 # ==============================================
@@ -1858,12 +1858,11 @@ step_05_core_packages() {
         default|server|minimal-development|development|security|defense|offsec|full|enterprise)
             packages+=(
                 # Ex-minimal comfort tools
-                wget zsh htop net-tools unzip tree ncdu ss lsof
+                wget zsh htop net-tools unzip tree ncdu lsof
                 # Modern comfort tools
                 lsd zip unrar p7zip-full
                 # Infrastructure tools
-                build-essential software-properties-common
-                apt-transport-https ca-certificates gnupg lsb-release
+                build-essential apt-transport-https ca-certificates gnupg lsb-release
                 python3 python3-pip python3-venv jq rsync
                 # systemd-resolved systemd-timesyncd  # Usually present, avoid conflicts
             )
@@ -1876,7 +1875,7 @@ step_05_core_packages() {
             packages+=(
                 logrotate psmisc dstat iotop nethogs
                 backup-manager sudo screen
-                openssl ca-certificates ca-certificates-utils whois
+                openssl ca-certificates whois
                 cron anacron at
                 rsyslog vnstat
             )
