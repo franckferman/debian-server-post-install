@@ -18,21 +18,44 @@ For Ubuntu Desktop, see: [github.com/franckferman/ubuntu-post-install](https://g
 
 ## Quick Start
 
+### Download and Run
 ```bash
-# Basic installation (VPS-safe)
+# Download script
+curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/main/debian-server-post-install.sh
+chmod +x debian-server-post-install.sh
+
+# Or direct execution (basic profile only - review first!)
+curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-install/main/debian-server-post-install.sh | bash
+
+# For root users (add --allow-root)
+./debian-server-post-install.sh --allow-root
+
+# Direct with arguments (download first)
+curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-install/main/debian-server-post-install.sh | bash -s -- --server-profile dev
+```
+
+### Profile Examples
+```bash
+# Basic installation (VPS-safe, no Docker)
 ./debian-server-post-install.sh
 
-# Production server with performance focus
+# Production server with Docker
 ./debian-server-post-install.sh --server-profile prod
 
-# Development server with convenience
+# Development server with full stack
 ./debian-server-post-install.sh --server-profile dev
 
 # Maximum security (still VPS-safe)
 ./debian-server-post-install.sh --server-profile hardened
 
-# Custom Docker engine
-./debian-server-post-install.sh --docker-type ce
+# Default + Docker installation
+./debian-server-post-install.sh --install-docker        # docker.io (default)
+./debian-server-post-install.sh --docker-type io        # docker.io (explicit)
+./debian-server-post-install.sh --docker-type ce        # docker-ce (official)
+
+# Examples with different types
+./debian-server-post-install.sh --server-profile default --docker-type ce
+./debian-server-post-install.sh --server-profile default --install-docker
 ```
 
 ## Server Profiles
@@ -55,7 +78,7 @@ For Ubuntu Desktop, see: [github.com/franckferman/ubuntu-post-install](https://g
 + UFW firewall with hardened rules
 + Minimal Vim preset (stable)
 + Monitoring and logging enabled
-+ Docker basic installation
+- No Docker (use --docker-type to install)
 + Network hardening: ICMP/TCP/Source routing protection active
 - Network hardening: IPv6/Anti-spoofing/Connection limits commented (safe)
 ```
@@ -295,6 +318,12 @@ These features may impact complex network configurations:
 --no-disable-modern-security   # Enable modern security features
 ```
 
+#### **Kexec System Call**
+```bash
+--disable-kexec                # Allow kexec system call (specialized environments)
+--no-disable-kexec             # Disable kexec system call (default, security hardening)
+```
+
 ## SSH Configuration
 
 ### Default SSH Security
@@ -351,16 +380,32 @@ SSH_PORT=22              # Standard port
 
 ## Docker Configuration
 
-### Docker Engine Types
+### Docker Installation
 ```bash
---docker-type <type>     # Docker package type (default: io)
+--install-docker         # Force Docker installation (docker.io by default)
+--docker-type <type>     # Docker type (auto-enables installation)
   io  # docker.io (Debian/Ubuntu repos, stable)
   ce  # docker-ce (Docker official repos, latest features)
+--no-docker              # Skip Docker installation
 ```
 
-**Default Behavior:**
-- Apps-profiles install `docker.io` if `--docker-type io` (default)
-- Step 8 configures existing docker.io or installs docker-ce
+**Installation Logic:**
+- **default/minimal/hardened**: No Docker by default
+- **prod/dev**: Docker installed automatically  
+- **Any profile**: Use `--install-docker`, `--extras docker`, or `--docker-type` to force installation
+- **--docker-type**: Automatically enables Docker installation with specified type
+- **--extras docker**: Works with `--docker-type` to specify engine type
+
+**Examples:**
+```bash
+# Default profile + Docker CE
+./script.sh --server-profile default --docker-type ce
+./script.sh --server-profile default --extras docker --docker-type ce
+
+# Default profile + Docker IO  
+./script.sh --server-profile default --install-docker
+./script.sh --server-profile default --extras docker
+```
 - Both types get identical security configuration
 
 ## Editor Configuration
@@ -380,6 +425,43 @@ SSH_PORT=22              # Standard port
   full     # vim-plug + plugins (dev profile)
   minimal  # gruvbox + basic config (default/prod/minimal)
   bare     # basic settings only (hardened)
+```
+
+## Kernel Security Hardening
+
+### Standards and Sources
+
+The kernel hardening parameters are based on industry-standard security frameworks:
+
+**Primary Sources:**
+- **CIS Benchmarks** - Center for Internet Security Linux hardening guidelines
+- **ANSSI** - French National Agency for Information Systems Security
+- **NIST SP 800-53** - National Institute of Standards and Technology controls
+- **KSPP** - Linux Kernel Self-Protection Project recommendations
+
+**Applied Protections:**
+```bash
+# Information Disclosure Prevention (CIS 1.6.1 + ANSSI R12)
+kernel.dmesg_restrict = 1              # Prevent unprivileged kernel log access
+kernel.kptr_restrict = 2               # Hide kernel pointers (anti-KASLR bypass)
+kernel.yama.ptrace_scope = 1           # Restrict process debugging
+
+# Kernel Exploit Mitigation (KSPP + CIS)
+kernel.kexec_load_disabled = 1         # Disable kexec (anti-rootkit)
+kernel.unprivileged_bpf_disabled = 1   # Disable unprivileged eBPF
+net.core.bpf_jit_harden = 2           # Harden BPF JIT compiler
+
+# File System Security (CIS 1.6.4 + NIST)
+fs.suid_dumpable = 0                   # Disable SUID core dumps
+fs.protected_hardlinks = 1             # Prevent hardlink attacks
+fs.protected_symlinks = 1              # Prevent symlink attacks
+fs.protected_fifos = 2                 # Prevent FIFO attacks
+fs.protected_regular = 2               # Prevent file attacks
+
+# ASLR Enhancement (CIS 1.6.2 + KSPP)
+kernel.randomize_va_space = 2          # Full address space randomization
+vm.mmap_rnd_bits = 32                  # Maximum mmap entropy (64-bit)
+vm.mmap_rnd_compat_bits = 16          # Maximum mmap entropy (32-bit)
 ```
 
 ## Hardening Profiles
@@ -513,11 +595,33 @@ Removes: xinetd, nis, rsh-client, talk, telnet, tftp,
 
 ### Extra Software
 ```bash
---extra-repos <extras>     # Additional software repositories
-  gh                       # GitHub CLI
-  
+--extras <list>            # Comma-separated extras to install
+  docker                   # Enable Docker installation (use with --docker-type)
+  gh                       # GitHub CLI with official repository
+  hashicorp                # Redirects to apps-profile development+
+  monitoring               # Handled by existing monitoring steps
+  mullvad                  # Use --install-mullvad flag instead
+
+--extra-packages <list>    # Comma-separated APT packages to add
+  htop,bat,exa,fd-find     # Example: modern CLI tools
+
 --install-mullvad          # Mullvad VPN client
 --mullvad-source <method>  # Installation method (apt|direct|github)
+```
+
+**Examples:**
+```bash
+# Docker via extras (docker.io by default)
+./script.sh --server-profile default --extras docker
+
+# Docker CE via extras + type specification
+./script.sh --server-profile default --extras docker --docker-type ce
+
+# GitHub CLI + custom packages
+./script.sh --server-profile default --extras gh --extra-packages kubectl,helm
+
+# Development with Docker CE + GitHub CLI
+./script.sh --server-profile dev --docker-type ce --extras gh
 ```
 
 ### Nerd Fonts

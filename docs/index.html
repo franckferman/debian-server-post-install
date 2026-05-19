@@ -382,14 +382,28 @@ nav {
   <p class="section-sub">Download the script, review it, run it with your preferred profile. No installer, no packages, no complex setup required.</p>
 
   <div style="position: relative; margin: 2rem 0; border-radius: 8px; overflow: hidden;">
-<pre style="background: var(--bg2); border: 1px solid var(--border); padding: 1.5rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; white-space: pre-wrap;"># Download
-curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/stable/debian-server-post-install.sh
+<pre style="background: var(--bg2); border: 1px solid var(--border); padding: 1.5rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; white-space: pre-wrap;"># Download and make executable
+curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/main/debian-server-post-install.sh
+chmod +x debian-server-post-install.sh
 
 # Review (important!)
 less debian-server-post-install.sh
 
-# Run with production profile
-sudo ./debian-server-post-install.sh --server-profile prod --hardening server</pre>
+# Basic installation (VPS-safe, no Docker)
+./debian-server-post-install.sh
+
+# Production with Docker
+./debian-server-post-install.sh --server-profile prod
+
+# Development stack
+./debian-server-post-install.sh --server-profile dev
+
+# Default + Docker installation
+./debian-server-post-install.sh --install-docker
+./debian-server-post-install.sh --docker-type ce
+
+# For root users
+./debian-server-post-install.sh --allow-root</pre>
   </div>
 </div>
 </div>

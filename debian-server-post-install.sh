@@ -69,6 +69,7 @@ DISABLE_TCP_PROTECTION=false
 DISABLE_ANTISPOOFING=true
 DISABLE_CONNECTION_LIMITS=true
 DISABLE_MODERN_SECURITY=true
+DISABLE_KEXEC=false
 SKIP_SERVICES=""
 SKIP_PACKAGES=""
 CUSTOM_SERVICES_LIST=""
@@ -83,7 +84,7 @@ _HARDEN_NETWORK_EXPLICIT=false
 APPS_PROFILE="default"
 EXTRA_PACKAGES=""
 SKIP_APT_PACKAGES=""
-INSTALL_DOCKER=true
+INSTALL_DOCKER=false
 DOCKER_COMPOSE=true
 DOCKER_TYPE="io"
 INSTALL_MONITORING=true
@@ -235,6 +236,8 @@ Options:
   --no-disable-connection-limits Enable TCP connection limits tuning.
   --disable-modern-security      Disable modern security features (default).
   --no-disable-modern-security   Enable modern security features.
+  --disable-kexec                Allow kexec system call (specialized environments).
+  --no-disable-kexec             Disable kexec system call (default, security hardening).
   --skip-services <list> Comma-separated services to keep when hardening.
   --skip-packages <list> Comma-separated packages to keep when hardening.
   --apps-profile <p>     APT package selection profile (default: default).
@@ -250,6 +253,7 @@ Options:
                          enterprise          Full + compliance: auditd, tripwire, ossec (65 pkg).
   --extra-packages <l>   Comma-separated APT packages to add to profile.
   --skip-apt-packages <l> Comma-separated APT packages to remove from profile.
+  --install-docker       Force Docker installation.
   --no-docker            Skip Docker installation.
   --no-docker-compose    Skip Docker Compose installation.
   --docker-type <type>   Docker package type (default: io).
@@ -389,9 +393,37 @@ check_sudo() {
 show_banner() {
     # Print ASCII art banner at script startup.
 
-    # ---[ Display Debian-themed ASCII art banner ]---
-    # Decorative header to indicate script start.
-    cat << "EOF"
+    # Colors for terminal (if supported)
+    local RED='\033[0;31m'
+    local NC='\033[0m' # No Color
+
+    # Check if terminal supports colors
+    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ $(tput colors) -ge 8 ]]; then
+        # ---[ Display Debian-themed ASCII art banner in red ]---
+        echo -e "${RED}                                  _,met\$\$\$\$\$gg.
+                               ,g\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$P.
+                             ,g\$\$P\"\"       \"\"\"Y\$\$.\".
+                            ,\$\$P'              \`\$\$\$.
+                          ',\$\$P       ,ggs.     \`\$\$b:
+                          \`d\$\$'     ,\$P\"'   .    \$\$\$
+                           \$\$P      d\$'     ,    \$\$P
+                           \$\$:      \$\$.   -    ,d\$\$'
+                           \$\$;      Y\$b._   _,d\$P'
+                           Y\$\$.    \`.\`\"Y\$\$\$\$P\"'
+                           \`\$\$b      \"-.__
+                            \`Y\$\$b
+                             \`Y\$\$.
+                               \`\$\$b.
+                                 \`Y\$\$b.
+                                   \`\"Y\$b._
+                                       \`\"\"\"\"${NC}
+
+    Debian Server Post-Installation Script v1.0.0
+    Security-focused server configuration for Debian-based systems
+"
+    else
+        # Fallback: plain ASCII without colors
+        cat << "EOF"
                                   _,met$$$$$gg.
                                ,g$$$$$$$$$$$$$$$P.
                              ,g$$P""       """Y$$.".
@@ -414,6 +446,7 @@ show_banner() {
     Security-focused server configuration for Debian-based systems
 
 EOF
+    fi
 }
 
 check_internet_connectivity() {
@@ -723,6 +756,12 @@ parse_args() {
             --no-disable-modern-security)
                 DISABLE_MODERN_SECURITY=false
                 ;;
+            --disable-kexec)
+                DISABLE_KEXEC=true
+                ;;
+            --no-disable-kexec)
+                DISABLE_KEXEC=false
+                ;;
             --skip-services)
                 if [[ -z "$2" || "$2" == --* ]]; then
                     echo "Error: --skip-services requires a value."
@@ -795,6 +834,9 @@ parse_args() {
                 SKIP_APT_PACKAGES="$2"
                 shift
                 ;;
+            --install-docker)
+                INSTALL_DOCKER=true
+                ;;
             --no-docker)
                 INSTALL_DOCKER=false
                 ;;
@@ -807,7 +849,10 @@ parse_args() {
                     exit 1
                 fi
                 case "$2" in
-                    io|ce) DOCKER_TYPE="$2" ;;
+                    io|ce)
+                        DOCKER_TYPE="$2"
+                        INSTALL_DOCKER=true  # Auto-enable Docker when type specified
+                        ;;
                     *)
                         echo "Error: Invalid docker type '$2'."
                         echo "       Valid types:"
@@ -1341,7 +1386,7 @@ _apply_server_profile() {
             if ! $_VIM_PRESET_EXPLICIT; then VIM_PRESET="minimal"; fi
             INSTALL_MONITORING=true
             ENABLE_LOGGING=true
-            INSTALL_DOCKER=true
+            INSTALL_DOCKER=false
             INSTALL_FAIL2BAN=true
             APPS_PROFILE="server"
             ;;
@@ -1734,35 +1779,57 @@ _harden_packages() {
 }
 
 _apply_sysctl_hardening() {
-    # Apply kernel hardening via sysctl
+    # Apply kernel hardening via sysctl (CIS + ANSSI + NIST + KSPP standards)
     echo "${ICON_OK} Applying kernel hardening..."
+
+    # Prevent duplicate application
+    if [[ -f /etc/sysctl.d/99-security-hardening.conf ]]; then
+        echo "${ICON_SKIP} Kernel hardening already applied, updating configuration..."
+    fi
 
     cat << EOF | sudo tee /etc/sysctl.d/99-security-hardening.conf
 # Security hardening configuration
 # Generated by debian-server-post-install.sh
+# Sources: CIS Benchmarks, ANSSI, NIST SP 800-53, Kernel Self-Protection Project (KSPP)
 
-# Kernel information disclosure protection
-kernel.dmesg_restrict = 1              # Prevent unprivileged access to kernel logs (info disclosure)
-kernel.kptr_restrict = 2               # Hide kernel pointers from /proc and /sys (KASLR bypass prevention)
-kernel.yama.ptrace_scope = 1           # Restrict ptrace to parent processes (prevents process injection)
+# === KERNEL INFORMATION DISCLOSURE PROTECTION ===
+# CIS 1.6.1 + ANSSI R12: Prevent information leakage attacks
+kernel.dmesg_restrict = 1              # CIS: Prevent unprivileged access to kernel logs
+kernel.kptr_restrict = 2               # ANSSI R12: Hide kernel pointers (anti-KASLR bypass)
+kernel.yama.ptrace_scope = 1           # ANSSI R11: Restrict ptrace to parent processes only
 
-# Kernel exploit mitigation
-kernel.kexec_load_disabled = 1         # Disable kexec system call (prevents kernel rootkits)
-kernel.unprivileged_bpf_disabled = 1   # Disable unprivileged BPF (prevents BPF-based exploits)
-net.core.bpf_jit_harden = 2           # Harden BPF JIT compiler (prevents JIT spraying attacks)
+# === KERNEL EXPLOIT MITIGATION ===
+# KSPP + CIS: Modern kernel security features
+kernel.unprivileged_bpf_disabled = 1   # KSPP: Disable unprivileged BPF (prevents eBPF exploits)
+net.core.bpf_jit_harden = 2           # KSPP: Harden BPF JIT compiler (anti-JIT spraying)
 
-# File system security
-fs.suid_dumpable = 0                   # Disable core dumps for SUID programs (prevents credential leaks)
-fs.protected_hardlinks = 1             # Prevent hardlink attacks in world-writable directories
-fs.protected_symlinks = 1              # Prevent symlink attacks in world-writable directories
-fs.protected_fifos = 2                 # Prevent FIFO attacks (strict protection mode)
-fs.protected_regular = 2               # Prevent regular file attacks (strict protection mode)
+# === FILE SYSTEM SECURITY ===
+# CIS 1.6.4 + NIST SP 800-53: File system attack prevention
+fs.suid_dumpable = 0                   # CIS 1.6.4: Disable core dumps for SUID programs
+fs.protected_hardlinks = 1             # NIST: Prevent hardlink attacks in world-writable dirs
+fs.protected_symlinks = 1              # NIST: Prevent symlink attacks in world-writable dirs
+fs.protected_fifos = 2                 # NIST: Prevent FIFO attacks (strict mode)
+fs.protected_regular = 2               # NIST: Prevent regular file attacks (strict mode)
 
-# Memory layout randomization (ASLR enhancement)
-kernel.randomize_va_space = 2          # Full ASLR - randomize all memory regions (anti-ROP/JOP)
-vm.mmap_rnd_bits = 32                  # Maximum entropy for 64-bit mmap ASLR (2^32 possibilities)
-vm.mmap_rnd_compat_bits = 16          # Maximum entropy for 32-bit compat mmap ASLR
+# === MEMORY LAYOUT RANDOMIZATION (ASLR ENHANCEMENT) ===
+# CIS 1.6.2 + KSPP: Address Space Layout Randomization hardening
+kernel.randomize_va_space = 2          # CIS 1.6.2: Full ASLR (stack, heap, mmap, VDSO, ET_EXEC)
+vm.mmap_rnd_bits = 32                  # KSPP: Maximum entropy for 64-bit mmap ASLR (2^32 possibilities)
+vm.mmap_rnd_compat_bits = 16          # KSPP: Maximum entropy for 32-bit compat mmap ASLR
 EOF
+
+    # Conditional kexec hardening (disabled by default for compatibility)
+    if $DISABLE_KEXEC; then
+        # Disabled: Allow kexec system call (specialized environments)
+        echo "# Kexec system call (use --no-disable-kexec to disable for security)" | sudo tee -a /etc/sysctl.d/99-security-hardening.conf
+        echo "# kernel.kexec_load_disabled = 1" | sudo tee -a /etc/sysctl.d/99-security-hardening.conf
+        echo "" | sudo tee -a /etc/sysctl.d/99-security-hardening.conf
+    else
+        # Enabled: Disable kexec for security hardening
+        echo "# Kexec system call hardening (enabled with --no-disable-kexec)" | sudo tee -a /etc/sysctl.d/99-security-hardening.conf
+        echo "kernel.kexec_load_disabled = 1       # KSPP: Disable kexec system call (anti-rootkit)" | sudo tee -a /etc/sysctl.d/99-security-hardening.conf
+        echo "" | sudo tee -a /etc/sysctl.d/99-security-hardening.conf
+    fi
 
     sudo sysctl -p /etc/sysctl.d/99-security-hardening.conf
 }
@@ -2196,8 +2263,8 @@ step_10_zsh_terminal() {
     # Step 10: Zsh and terminal configuration
     log_section "Step 10: Configuring Zsh terminal."
 
-    # Check if Zsh is installed (via apps-profile)
-    if ! dpkg -l | grep -q "^ii  zsh"; then
+    # Check if Zsh is available (installed or being installed)
+    if ! command -v zsh >/dev/null 2>&1 && ! dpkg -l | grep -q "^ii  zsh"; then
         echo "${ICON_SKIP} Zsh not installed, skipping configuration."
         echo "${ICON_OK} Use apps-profile default+ to install zsh first."
         return
@@ -2258,7 +2325,8 @@ step_11_extra_software() {
         for extra in "${extras_array[@]}"; do
             case "$extra" in
                 docker)
-                    echo "${ICON_SKIP} Docker already handled in step 8."
+                    echo "${ICON_OK} Enabling Docker installation via extras."
+                    INSTALL_DOCKER=true
                     ;;
                 gh)
                     _install_github_cli
