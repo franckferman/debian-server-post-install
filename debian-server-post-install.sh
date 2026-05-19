@@ -397,8 +397,8 @@ show_banner() {
     local RED='\033[0;31m'
     local NC='\033[0m' # No Color
 
-    # Check if terminal supports colors
-    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ $(tput colors) -ge 8 ]]; then
+    # Check if terminal supports colors (allow colors in most environments)
+    if [[ "${TERM:-}" != "dumb" ]] && command -v tput >/dev/null 2>&1 && [[ $(tput colors 2>/dev/null || echo 0) -ge 8 ]]; then
         # ---[ Display Debian-themed ASCII art banner in red ]---
         echo -e "${RED}                                  _,met\$\$\$\$\$gg.
                                ,g\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$P.
@@ -2280,7 +2280,8 @@ step_10_zsh_terminal() {
     log_section "Step 10: Configuring Zsh terminal."
 
     # Check if Zsh is available (installed or being installed)
-    if ! command -v zsh >/dev/null 2>&1 && ! dpkg -l | grep -q "^ii  zsh"; then
+    # Try multiple detection methods for robustness
+    if ! command -v zsh >/dev/null 2>&1 && ! dpkg -l 2>/dev/null | grep -q "^ii  zsh" && ! which zsh >/dev/null 2>&1 && ! test -f /usr/bin/zsh && ! test -f /bin/zsh; then
         echo "${ICON_SKIP} Zsh not installed, skipping configuration."
         echo "${ICON_OK} Use apps-profile default+ to install zsh first."
         return
