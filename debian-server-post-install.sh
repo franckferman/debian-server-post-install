@@ -1859,6 +1859,8 @@ step_05_core_packages() {
             packages+=(
                 # Ex-minimal comfort tools
                 wget zsh htop net-tools unzip tree ncdu lsof
+                # Network tools (try both variants for compatibility)
+                iproute2
                 # Modern comfort tools
                 lsd zip unrar p7zip-full
                 # Infrastructure tools
@@ -1866,6 +1868,16 @@ step_05_core_packages() {
                 python3 python3-pip python3-venv jq rsync
                 # systemd-resolved systemd-timesyncd  # Usually present, avoid conflicts
             )
+
+    # Add distribution-specific packages for compatibility
+    if [[ "$DISTRO" == "ubuntu" ]]; then
+        packages+=(software-properties-common ca-certificates-utils)
+    fi
+
+    # Add ss command (try iproute2-ss or separate ss package if needed)
+    if ! command -v ss >/dev/null 2>&1; then
+        packages+=(iproute2)
+    fi
             ;;
     esac
 
@@ -1879,6 +1891,11 @@ step_05_core_packages() {
                 cron anacron at
                 rsyslog vnstat
             )
+
+    # Add Ubuntu-specific packages for server profile
+    if [[ "$DISTRO" == "ubuntu" ]]; then
+        packages+=(ca-certificates-utils)
+    fi
             ;;
     esac
 
