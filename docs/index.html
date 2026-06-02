@@ -374,6 +374,59 @@ nav {
 </div>
 </div>
 
+<!-- PROFILES SECTION -->
+<div style="background: var(--bg1); padding: 3rem 0;">
+<div class="section">
+  <div class="section-tag">Configuration</div>
+  <h2 class="section-title">Intelligent Profile System</h2>
+  <p class="section-sub">Two-layer architecture: server behavior + package selection with cumulative inheritance.</p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem;">
+      <h3 style="color: var(--accent); margin-bottom: 1rem;">🖥️ SERVER PROFILES</h3>
+      <p style="color: var(--muted); margin-bottom: 1rem;">Configure overall server behavior:</p>
+      <ul style="color: var(--muted); margin: 0; padding-left: 1rem;">
+        <li><strong>default</strong> → Balanced (UFW, monitoring)</li>
+        <li><strong>prod</strong> → Production (nftables, Docker)</li>
+        <li><strong>dev</strong> → Development (transparent firewall)</li>
+        <li><strong>minimal</strong> → Lightweight (essential only)</li>
+        <li><strong>hardened</strong> → Security-focused (USBGuard)</li>
+      </ul>
+    </div>
+
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem;">
+      <h3 style="color: var(--accent); margin-bottom: 1rem;">📦 APPS PROFILES</h3>
+      <p style="color: var(--muted); margin-bottom: 1rem;">Cumulative package inheritance:</p>
+      <ul style="color: var(--muted); margin: 0; padding-left: 1rem;">
+        <li><strong>minimal</strong> (5) → Essential survival tools</li>
+        <li><strong>default</strong> (29) → + Infrastructure tools</li>
+        <li><strong>server</strong> (36) → + Management tools</li>
+        <li><strong>enterprise</strong> (60) → + Compliance + backup-manager</li>
+        <li><strong>full</strong> (57) → Development + Security</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 2rem 0;">
+    <h4 style="color: var(--accent); margin-bottom: 1rem;">🔄 Smart Mapping</h4>
+    <p style="color: var(--muted); margin-bottom: 1rem;">Server profiles automatically choose appropriate package sets:</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div><code>--server-profile default</code> → <strong>server</strong> packages (36)</div>
+      <div><code>--server-profile prod</code> → <strong>server</strong> packages (36)</div>
+      <div><code>--server-profile dev</code> → <strong>full</strong> packages (57)</div>
+      <div><code>--server-profile hardened</code> → <strong>defense</strong> packages (47)</div>
+    </div>
+  </div>
+
+  <div style="background: linear-gradient(135deg, var(--accent-faded), transparent); border: 1px solid var(--accent); border-radius: 8px; padding: 1.5rem;">
+    <h4 style="color: var(--accent); margin-bottom: 1rem;">⚠️ Important: backup-manager Changes</h4>
+    <p style="margin-bottom: 0.5rem;"><strong>Previously:</strong> backup-manager was in server profile (37 packages)</p>
+    <p style="margin-bottom: 0.5rem;"><strong>Now:</strong> backup-manager moved to enterprise profile (60 packages)</p>
+    <p style="color: var(--muted); margin: 0;"><strong>Rationale:</strong> Modern servers use cloud backup, containers, or infrastructure-as-code. Traditional backup-manager fits better with enterprise compliance scenarios.</p>
+  </div>
+</div>
+</div>
+
 <!-- QUICKSTART -->
 <div id="quickstart" style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
 <div class="section">
