@@ -243,14 +243,14 @@ Options:
   --apps-profile <p>     APT package selection profile (default: default).
                          minimal             Survival only: git, curl, vim, fail2ban, tmux (5 pkg).
                          default             Minimal + comfort + infrastructure: wget, zsh, build-essential (26 pkg).
-                         server              Default + server mgmt: logrotate, backup, monitoring (35 pkg).
+                         server              Default + server mgmt: logrotate, monitoring (34 pkg).
                          minimal-development Server + light dev: python3-dev, make, golang-go (32 pkg).
                          development         Minimal-dev + full stack: nodejs, golang, docker (43 pkg).
                          security            Server + network security: nmap, tcpdump (37 pkg).
                          defense             Security + blue team: lynis, wireshark, aide (45 pkg).
                          offsec              Security + red team: netcat-openbsd (38 pkg).
                          full                Development + Defense + Offsec (55 pkg).
-                         enterprise          Full + compliance: auditd, tripwire, ossec (65 pkg).
+                         enterprise          Full + compliance + backup: auditd, backup-manager (66 pkg).
   --extra-packages <l>   Comma-separated APT packages to add to profile.
   --skip-apt-packages <l> Comma-separated APT packages to remove from profile.
   --install-docker       Force Docker installation.
@@ -1890,7 +1890,7 @@ step_05_core_packages() {
         server|minimal-development|development|security|defense|offsec|full|enterprise)
             packages+=(
                 logrotate psmisc dstat iotop nethogs
-                backup-manager sudo screen
+                sudo screen
                 openssl ca-certificates whois
                 cron anacron at
                 rsyslog vnstat
@@ -1964,6 +1964,7 @@ step_05_core_packages() {
     case "$APPS_PROFILE" in
         enterprise)
             packages+=(
+                backup-manager
                 auditd sysstat acct
                 logwatch logcheck
                 rng-tools haveged
@@ -3068,14 +3069,14 @@ _count_packages() {
     case "$APPS_PROFILE" in
         minimal) echo "5" ;;
         default) echo "29" ;;
-        server) echo "37" ;;
+        server) echo "36" ;;
         minimal-development) echo "32" ;;
         development) echo "43" ;;
         security) echo "39" ;;
         defense) echo "47" ;;
         offsec) echo "40" ;;
         full) echo "57" ;;
-        enterprise) echo "59" ;;
+        enterprise) echo "60" ;;
         *) echo "?" ;;
     esac
 }
