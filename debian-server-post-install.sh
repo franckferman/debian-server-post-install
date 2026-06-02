@@ -1146,7 +1146,7 @@ step_04_system_hardening() {
     # Install USBGuard if requested
     if $INSTALL_USBGUARD; then
         echo "${ICON_OK} Installing USBGuard..."
-        sudo apt install -y usbguard usbguard-applet-qt
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y usbguard usbguard-applet-qt
         sudo usbguard generate-policy | sudo tee /etc/usbguard/rules.conf > /dev/null
         sudo systemctl enable usbguard
         sudo systemctl start usbguard
@@ -1212,7 +1212,7 @@ _fw_configure_ufw() {
 
     if ! command -v ufw &>/dev/null; then
         echo "${ICON_OK} Installing UFW..."
-        sudo apt install -y ufw
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y ufw
     fi
 
     case "$FIREWALL_PROFILE" in
@@ -1245,7 +1245,7 @@ _fw_configure_nftables() {
 
     if ! command -v nft &>/dev/null; then
         echo "${ICON_OK} Installing nftables..."
-        sudo apt install -y nftables
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y nftables
     fi
 
     case "$FIREWALL_PROFILE" in
@@ -1316,7 +1316,7 @@ _fw_configure_iptables() {
 
     if ! command -v iptables &>/dev/null; then
         echo "${ICON_OK} Installing iptables..."
-        sudo apt install -y iptables iptables-persistent
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y iptables iptables-persistent
     fi
 
     case "$FIREWALL_PROFILE" in
@@ -1989,7 +1989,7 @@ step_05_core_packages() {
     echo "${ICON_OK} Installing core packages..."
     echo "Installing (${#packages[@]} packages): ${packages[*]}"
     echo ""
-    sudo apt install -y "${packages[@]}"
+    DEBIAN_FRONTEND=noninteractive sudo apt install -y "${packages[@]}"
     echo "${ICON_OK} Core packages installation completed."
 
     # Install specialized tools via functions (not APT)
@@ -2007,7 +2007,7 @@ step_06_security_monitoring() {
     # Fail2ban: check if installed, install if missing, then configure
     if ! dpkg -l | grep -q "^ii  fail2ban"; then
         echo "${ICON_OK} Installing fail2ban..."
-        sudo apt install -y fail2ban
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y fail2ban
     fi
 
     echo "${ICON_OK} Configuring Fail2ban..."
@@ -2162,9 +2162,9 @@ configure_docker_io() {
     if ! dpkg -l | grep -q "^ii  docker.io"; then
         echo "${ICON_WARN} docker.io not found but requested. Installing..."
         sudo apt update
-        sudo apt install -y docker.io
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y docker.io
         if $DOCKER_COMPOSE; then
-            sudo apt install -y docker-compose
+            DEBIAN_FRONTEND=noninteractive sudo apt install -y docker-compose
         fi
     fi
 
@@ -2188,7 +2188,7 @@ install_docker_ce() {
     if [ ${#missing_prereq[@]} -gt 0 ]; then
         echo "${ICON_OK} Installing missing prerequisites: ${missing_prereq[*]}"
         sudo apt update
-        sudo apt install -y "${missing_prereq[@]}"
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y "${missing_prereq[@]}"
     fi
 
     # Add Docker's official GPG key
@@ -2202,11 +2202,11 @@ install_docker_ce() {
 
     # Install Docker Engine
     sudo apt update
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+    DEBIAN_FRONTEND=noninteractive sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
 
     # Install Docker Compose if requested
     if $DOCKER_COMPOSE; then
-        sudo apt install -y docker-compose-plugin
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y docker-compose-plugin
         echo "${ICON_OK} Docker Compose installed."
     fi
 
@@ -2258,7 +2258,7 @@ step_09_vim_configuration() {
     fi
 
     echo "${ICON_OK} Installing Vim..."
-    sudo apt install -y vim
+    DEBIAN_FRONTEND=noninteractive sudo apt install -y vim
 
     case "$VIM_PRESET" in
         full)
@@ -2445,7 +2445,7 @@ _configure_vim_minimal() {
 
     # Install gruvbox theme via package manager if available
     if apt-cache show vim-airline &>/dev/null; then
-        sudo apt install -y vim-airline vim-airline-themes
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y vim-airline vim-airline-themes
     fi
 
     cat > "$HOME/.vimrc" << 'EOF'
@@ -2622,7 +2622,7 @@ _install_github_cli() {
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
 
     sudo apt update
-    sudo apt install -y gh
+    DEBIAN_FRONTEND=noninteractive sudo apt install -y gh
 }
 
 _install_hashicorp_from_profile() {
@@ -2648,7 +2648,7 @@ _install_hashicorp_tools() {
 
     # Convert space-separated list to array and install
     local tools_array=($tools_list)
-    sudo apt install -y "${tools_array[@]}"
+    DEBIAN_FRONTEND=noninteractive sudo apt install -y "${tools_array[@]}"
 }
 
 
@@ -2699,7 +2699,7 @@ _install_mullvad_apt() {
 
     # Update and install
     sudo apt update
-    if sudo apt install -y mullvad-vpn; then
+    if DEBIAN_FRONTEND=noninteractive sudo apt install -y mullvad-vpn; then
         echo "${ICON_OK} Mullvad VPN installed successfully via APT."
         return 0
     else
