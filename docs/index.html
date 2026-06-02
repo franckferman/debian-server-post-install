@@ -314,12 +314,12 @@ nav {
     Profile-based automation with VPS-safe security hardening, network protection, and package management. Built for production servers.
   </p>
 
-  <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; position: relative; z-index: 100;">
     <a href="#quickstart" class="btn btn-primary">Download script</a>
     <a href="https://github.com/franckferman/debian-server-post-install#readme" class="btn btn-secondary" target="_blank">Read the docs</a>
   </div>
 
-  <div class="terminal">
+  <div class="terminal" style="position: relative; z-index: 50;">
     <div class="term-header">
       <div class="term-dot r"></div>
       <div class="term-dot y"></div>
@@ -381,7 +381,7 @@ nav {
   <h2 class="section-title">Intelligent Profile System</h2>
   <p class="section-sub">Two-layer architecture: server behavior + package selection with cumulative inheritance.</p>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0; position: relative; z-index: 1;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
     <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem;">
       <h3 style="color: var(--accent); margin-bottom: 1rem;">🖥️ SERVER PROFILES</h3>
       <p style="color: var(--muted); margin-bottom: 1rem;">Configure overall server behavior:</p>
@@ -410,7 +410,7 @@ nav {
   <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 2rem 0;">
     <h4 style="color: var(--accent); margin-bottom: 1rem;">🔄 Smart Mapping</h4>
     <p style="color: var(--muted); margin-bottom: 1rem;">Server profiles automatically choose appropriate package sets:</p>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; position: relative; z-index: 2;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
       <div><code>--server-profile default</code> → <strong>server</strong> packages (36)</div>
       <div><code>--server-profile prod</code> → <strong>server</strong> packages (36)</div>
       <div><code>--server-profile dev</code> → <strong>full</strong> packages (57)</div>
@@ -434,7 +434,7 @@ nav {
   <h2 class="section-title">Deploy in one command.</h2>
   <p class="section-sub">Download the script, review it, run it with your preferred profile. No installer, no packages, no complex setup required.</p>
 
-  <div style="position: relative; margin: 2rem 0; border-radius: 8px; overflow: hidden; z-index: 10;">
+  <div style="position: relative; margin: 2rem 0; border-radius: 8px; overflow: hidden;">
 <pre style="background: var(--bg2); border: 1px solid var(--border); padding: 1.5rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; white-space: pre-wrap;"># Download and make executable
 curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/stable/debian-server-post-install.sh
 chmod +x debian-server-post-install.sh
