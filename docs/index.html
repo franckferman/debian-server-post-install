@@ -428,29 +428,86 @@ nav {
   <h2 class="section-title">Deploy in one command.</h2>
   <p class="section-sub">Download the script, review it, run it with your preferred profile. No installer, no packages, no complex setup required.</p>
 
-  <div style="position: relative; margin: 2rem 0; border-radius: 8px; overflow: hidden;">
-<pre style="background: var(--bg2); border: 1px solid var(--border); padding: 1.5rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; white-space: pre-wrap;"># Download and make executable
+  <div style="margin: 2rem 0;">
+    <!-- Download Section -->
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.5rem; overflow: hidden;">
+      <div style="background: var(--accent); color: white; padding: 0.5rem 1rem; font-weight: bold;">📥 Download & Setup</div>
+<pre style="padding: 1.5rem; margin: 0; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto;"># Download and make executable
 curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/stable/debian-server-post-install.sh
 chmod +x debian-server-post-install.sh
 
-# Review (important!)
-less debian-server-post-install.sh
+# Review before running (important!)
+less debian-server-post-install.sh</pre>
+    </div>
 
-# Basic installation (VPS-safe, no Docker)
+    <!-- Basic Examples -->
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.5rem; overflow: hidden;">
+      <div style="background: #28a745; color: white; padding: 0.5rem 1rem; font-weight: bold;">🖥️ SERVER PROFILES (Behavior Configuration)</div>
+<pre style="padding: 1.5rem; margin: 0; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto;"># Default: Balanced server (UFW firewall, monitoring, 36 packages)
 ./debian-server-post-install.sh
+./debian-server-post-install.sh --server-profile default
 
-# Production with Docker
+# Production: nftables firewall + Docker enabled (36 packages)
 ./debian-server-post-install.sh --server-profile prod
 
-# Development stack
+# Development: Transparent firewall + full toolchain (57 packages)
 ./debian-server-post-install.sh --server-profile dev
 
-# Default + Docker installation
-./debian-server-post-install.sh --install-docker
-./debian-server-post-install.sh --docker-type ce
+# Minimal: Ultra-light, vim only (5 packages)
+./debian-server-post-install.sh --server-profile minimal
 
-# For root users
-./debian-server-post-install.sh --allow-root</pre>
+# Hardened: Maximum security + USBGuard (47 packages)
+./debian-server-post-install.sh --server-profile hardened</pre>
+    </div>
+
+    <!-- Apps Profiles Examples -->
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.5rem; overflow: hidden;">
+      <div style="background: #6f42c1; color: white; padding: 0.5rem 1rem; font-weight: bold;">📦 APPS PROFILES (Package Selection)</div>
+<pre style="padding: 1.5rem; margin: 0; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto;"># Override default app profile selection
+./debian-server-post-install.sh --apps-profile minimal      # 5 packages: survival only
+./debian-server-post-install.sh --apps-profile default      # 29 packages: + infrastructure
+./debian-server-post-install.sh --apps-profile server       # 36 packages: + server management
+./debian-server-post-install.sh --apps-profile enterprise   # 60 packages: + backup-manager + compliance
+./debian-server-post-install.sh --apps-profile full         # 57 packages: complete dev + security stack</pre>
+    </div>
+
+    <!-- Mix & Match Examples -->
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.5rem; overflow: hidden;">
+      <div style="background: #fd7e14; color: white; padding: 0.5rem 1rem; font-weight: bold;">🔄 MIX & MATCH (Server Config + Package Override)</div>
+<pre style="padding: 1.5rem; margin: 0; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto;"># Production server behavior BUT minimal packages
+./debian-server-post-install.sh --server-profile prod --apps-profile minimal
+
+# Default server behavior BUT enterprise packages (with backup-manager)
+./debian-server-post-install.sh --server-profile default --apps-profile enterprise
+
+# Development server BUT only essential packages
+./debian-server-post-install.sh --server-profile dev --apps-profile default
+
+# Hardened security BUT full development stack
+./debian-server-post-install.sh --server-profile hardened --apps-profile full</pre>
+    </div>
+
+    <!-- Specific Use Cases -->
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+      <div style="background: #20c997; color: white; padding: 0.5rem 1rem; font-weight: bold;">🎯 SPECIFIC USE CASES</div>
+<pre style="padding: 1.5rem; margin: 0; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; overflow-x: auto;"># VPS with traditional backup needs
+./debian-server-post-install.sh --apps-profile enterprise
+
+# Container host (no backup-manager needed)
+./debian-server-post-install.sh --apps-profile server
+
+# Development workstation on server
+./debian-server-post-install.sh --server-profile dev
+
+# Docker production server
+./debian-server-post-install.sh --server-profile prod --docker-type ce
+
+# Add custom packages to any profile
+./debian-server-post-install.sh --extra-packages "htop,bat,fd-find"
+
+# Remove specific packages from any profile
+./debian-server-post-install.sh --skip-apt-packages "backup-manager,screen"</pre>
+    </div>
   </div>
 </div>
 </div>
