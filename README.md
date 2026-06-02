@@ -21,17 +21,17 @@ For Ubuntu Desktop, see: [github.com/franckferman/ubuntu-post-install](https://g
 ### Download and Run
 ```bash
 # Download script
-curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/main/debian-server-post-install.sh
+curl -O https://raw.githubusercontent.com/franckferman/debian-server-post-install/stable/debian-server-post-install.sh
 chmod +x debian-server-post-install.sh
 
 # Or direct execution (basic profile only - review first!)
-curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-install/main/debian-server-post-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-install/stable/debian-server-post-install.sh | bash
 
 # For root users (add --allow-root)
 ./debian-server-post-install.sh --allow-root
 
 # Direct with arguments (download first)
-curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-install/main/debian-server-post-install.sh | bash -s -- --server-profile dev
+curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-install/stable/debian-server-post-install.sh | bash -s -- --server-profile dev
 ```
 
 ### Profile Examples
