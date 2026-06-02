@@ -965,6 +965,10 @@ step_01_system_update() {
         echo "${ICON_OK} Updating package lists (apt update)..."
         sudo apt update
 
+        echo "${ICON_OK} Configuring debconf for non-interactive installation..."
+        echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
+        sudo dpkg-reconfigure -f noninteractive debconf
+
         echo "${ICON_OK} Upgrading all packages (apt full-upgrade)..."
         DEBIAN_FRONTEND=noninteractive sudo apt full-upgrade -y
 
@@ -1984,6 +1988,14 @@ step_05_core_packages() {
         for skip in "${skip_array[@]}"; do
             packages=("${packages[@]/$skip}")
         done
+    fi
+
+    # Pre-configure packages that might show interactive prompts
+    if [[ " ${packages[*]} " =~ " backup-manager " ]]; then
+        echo "${ICON_OK} Pre-configuring backup-manager to avoid interactive prompts..."
+        echo 'backup-manager backup-manager/backup-repository select none' | sudo debconf-set-selections
+        echo 'backup-manager backup-manager/name string ""' | sudo debconf-set-selections
+        echo 'backup-manager backup-manager/directories string ""' | sudo debconf-set-selections
     fi
 
     echo "${ICON_OK} Installing core packages..."
