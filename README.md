@@ -64,8 +64,8 @@ curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-ins
 
 | Profile | Editor | Firewall | VIM | SSH | Apps | Use Case |
 |---------|--------|----------|-----|-----|------|----------|
-| **default** | both | ufw + hardened | minimal | VPS-safe | server (37) | General purpose |
-| **prod** | both | nftables + hardened | minimal | VPS-safe | server (37) | Production ready |
+| **default** | both | ufw + hardened | minimal | VPS-safe | server (36) | General purpose |
+| **prod** | both | nftables + hardened | minimal | VPS-safe | server (36) | Production ready |
 | **dev** | both | ufw + transparent | full | VPS-safe | full (57) | Development friendly |
 | **minimal** | vim | ufw + hardened | minimal | VPS-safe | minimal (5) | Lightweight essential |
 | **hardened** | vim | nftables + hardened | bare | VPS-safe | defense (47) | Maximum security |
@@ -124,33 +124,96 @@ curl -fsSL https://raw.githubusercontent.com/franckferman/debian-server-post-ins
 + Same network hardening as default (conservative)
 ```
 
-## Apps-Profile System
+### SERVER_PROFILE → APPS_PROFILE Mapping
 
-### `--apps-profile <profile>`
+When you choose a `--server-profile`, it automatically sets the `--apps-profile`:
 
-The apps-profile system uses inheritance and specialized functions to minimize redundancy:
+| SERVER_PROFILE | → APPS_PROFILE | Total Packages | Logic |
+|---------------|---------------|----------------|-------|
+| **default** | → **server** | 36 | Balanced server with management tools |
+| **prod** | → **server** | 36 | Production server with same package set |
+| **dev** | → **full** | 57 | Development server with full toolchain |
+| **minimal** | → **minimal** | 5 | Lightweight server, essential only |
+| **hardened** | → **defense** | 47 | Security-focused with audit tools |
+
+**Important:** You can override this with `--apps-profile <profile>` to mix and match:
+
+```bash
+# Server profile "default" but with enterprise packages
+./script.sh --server-profile default --apps-profile enterprise
+
+# Production server config but minimal packages  
+./script.sh --server-profile prod --apps-profile minimal
+```
+
+## Profile System Architecture
+
+### Understanding SERVER_PROFILE vs APPS_PROFILE
+
+**SERVER_PROFILE** configures the server's overall behavior and defaults:
+- `default` = Balanced server configuration (UFW firewall, monitoring enabled)  
+- `prod` = Production server (nftables, Docker enabled)
+- `dev` = Development server (transparent firewall, full vim)
+- `minimal` = Lightweight server (vim only, no monitoring)
+- `hardened` = Security-focused server (nftables, USBGuard)
+
+**APPS_PROFILE** determines which software packages are installed:
+- Uses a **cumulative inheritance system** where higher profiles include all lower levels
+- You choose ONE apps profile, but it includes all the packages from levels below it
+
+### `--apps-profile <profile>` - Cumulative Inheritance System
 
 ```
-minimal (5) -> default (29) -> server (37) -> minimal-development (32) -> development (43)
-                                           -> security (39) -> defense (47)
-                                                           -> offsec (40)
-                                                           -> full (57) -> enterprise (67)
+Level 1: minimal (5)
+    ↓
+Level 2: default (29) = minimal + comfort tools  
+    ↓
+Level 3: server (36) = default + server management tools
+    ↓
+Level 4A: minimal-development (32) = server + light dev tools
+Level 4B: security (39) = server + security tools
+    ↓                         ↓
+Level 5A: development (43)    Level 5B: defense (47) = security + blue team
+         ↓                    Level 5C: offsec (40) = security + red team  
+Level 6: full (57) = development + defense + offsec
+    ↓
+Level 7: enterprise (60) = full + compliance + backup-manager
 ```
 
-### Quick Reference Table
+### Package Inheritance Table
 
-| Profile | Packages | Inherits From | Adds | Primary Use Case |
-|---------|----------|---------------|------|------------------|
-| **minimal** | 5 | - | Survival only | Containers, ultra-light VPS |
-| **default** | 29 | minimal | Comfort + infrastructure tools | Standard server |
-| **server** | 37 | default | Server mgmt (monitoring, backup) | Production server |
-| **minimal-development** | 32 | server | Light dev tools (python-dev, make) | Light development |
-| **development** | 43 | minimal-development | Full stack (node, golang, docker) | Complete development |
-| **security** | 39 | server | General security tools (nmap, tcpdump) | Network security basics |
-| **defense** | 47 | security | Blue team tools (lynis, wireshark) | Security audit server |
-| **offsec** | 40 | security | Red team tools (netcat) | Offensive security |
-| **full** | 57 | development + defense | Complete dev + security | Full workstation |
-| **enterprise** | 67 | full | Compliance (auditd, tripwire) | Enterprise compliance |
+| Profile | Total | Includes ALL Packages From | Adds to Previous Level |
+|---------|-------|----------------------------|------------------------|
+| **minimal** | 5 | - | git, vim, curl, fail2ban, tmux |
+| **default** | 29 | minimal | wget, zsh, htop, python3, build-essential, jq |
+| **server** | 36 | minimal + default | logrotate, screen, cron, rsyslog, vnstat |
+| **minimal-development** | 32 | minimal + default + server | python3-dev, make, cmake, golang-go |
+| **development** | 43 | minimal + default + server + minimal-dev | nodejs, docker, ansible, postgresql-client |
+| **security** | 39 | minimal + default + server | nmap, tcpdump |
+| **defense** | 47 | minimal + default + server + security | lynis, wireshark, aide, rkhunter |
+| **offsec** | 40 | minimal + default + server + security | netcat-openbsd |
+| **full** | 57 | development + defense + offsec | Everything from dev + security branches |
+| **enterprise** | 60 | full + backup-manager | auditd, backup-manager, logwatch, compliance tools |
+
+### Key Changes: backup-manager Location
+
+**Previously:** backup-manager was in server profile (37 packages)  
+**Now:** backup-manager moved to enterprise profile (60 packages)
+
+**Rationale:** Modern servers often use external backup solutions (cloud, containers, infrastructure-as-code). backup-manager fits better with enterprise compliance requirements.
+
+### How to Get backup-manager
+
+```bash
+# Option 1: Enterprise profile (full stack + compliance + backup)
+./script.sh --apps-profile enterprise
+
+# Option 2: Add to any profile  
+./script.sh --apps-profile server --extra-packages backup-manager
+
+# Option 3: Remove from any profile that includes it
+./script.sh --apps-profile enterprise --skip-apt-packages backup-manager
+```
 
 ### Package Details by Layer
 
@@ -172,13 +235,13 @@ apt-transport-https ca-certificates gnupg lsb-release
 python3 python3-pip python3-venv jq rsync
 ```
 
-#### Level 3: server (+8 packages)
+#### Level 3: server (+7 packages)
 ```bash
 logrotate psmisc dstat iotop nethogs
-backup-manager sudo screen
-openssl ca-certificates-utils
+sudo screen openssl ca-certificates-utils
 cron anacron at rsyslog vnstat
 ```
+**Note:** backup-manager was moved to enterprise profile for modern deployment scenarios.
 
 #### Level 4A: minimal-development (+5 packages)
 ```bash
@@ -214,12 +277,14 @@ aide debsecan debsums
 netcat-openbsd
 ```
 
-#### Level 6: enterprise (+10 packages)
+#### Level 7: enterprise (+3 packages)
 ```bash
-auditd sysstat acct
-logwatch logcheck
-rng-tools haveged
+backup-manager          # Traditional backup management system
+auditd sysstat acct     # System auditing and accounting
+logwatch logcheck       # Advanced log monitoring
+rng-tools haveged       # Entropy generation for cryptography
 ```
+**Note:** enterprise includes all previous levels (57 packages) + these compliance tools.
 
 ### Installation Methods
 
